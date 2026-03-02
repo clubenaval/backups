@@ -24,9 +24,18 @@
             margin: 0; 
             padding: 0; 
             padding-bottom: 70px; /* Garante que o conteúdo não fique escondido sob o rodapé fixo */
+            overflow-y: scroll; /* FORÇA A BARRA DE ROLAGEM A SEMPRE APARECER */
         }
+        
         header { background-color: var(--cn-red); color: white; padding: 15px 0; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         header h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+
+        /* Navbar de Transição */
+        .navbar { background-color: var(--cn-red-dark); padding: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .navbar a { text-decoration: none; margin: 0 20px; font-weight: bold; font-size: 14px; transition: 0.2s; }
+        .navbar a.active { color: white; }
+        .navbar a.inactive { color: #ffcccc; }
+        .navbar a.inactive:hover { color: white; }
 
         .container {
             max-width: 100%;
@@ -134,21 +143,16 @@
         }
     </style>
 </head>
-
-<nav style="background-color: var(--cn-red-dark); padding: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <a href="/" style="color: white; text-decoration: none; margin: 0 20px; font-weight: bold; font-size: 14px;">
-            <i class="fas fa-desktop"></i> Monitoramento (Tempo Real)
-        </a>
-        <a href="/historico" style="color: #ffcccc; text-decoration: none; margin: 0 20px; font-weight: bold; font-size: 14px; transition: 0.2s;">
-            <i class="fas fa-history"></i> Histórico e Relatórios
-        </a>
-</nav>
-
 <body>
 
     <header>
         <h1>STATUS DE BACKUP - CLUBE NAVAL</h1>
     </header>
+
+    <nav class="navbar">
+        <a href="/" class="active"><i class="fas fa-desktop"></i> Monitoramento (Tempo Real)</a>
+        <a href="/historico" class="inactive"><i class="fas fa-history"></i> Histórico e Relatórios</a>
+    </nav>
 
     <div class="container">
         {% if backups %}
@@ -227,17 +231,11 @@
     </div>
 
     <footer class="fixed-footer">
-        <span class="footer-text">
-            Desenvolvido por <a href="https://henrique.tec.br" target="_blank">Henrique Fagundes</a>
-        </span>
+        <span class="footer-text">Desenvolvido por <a href="https://henrique.tec.br" target="_blank">Henrique Fagundes</a></span>
         <span class="footer-separator">|</span>
-        <span class="footer-text">
-            Todos os Direitos Reservados
-        </span>
+        <span class="footer-text">Todos os Direitos Reservados</span>
         <span class="footer-separator">|</span>
-        <span class="footer-version">
-            {{ version }}
-        </span>
+        <span class="footer-version"><i class="fas fa-code-branch"></i> {{ version }}</span>
     </footer>
 
     <script>
