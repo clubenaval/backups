@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import desc
 import os
 import time
 
@@ -91,10 +92,63 @@ def dashboard():
         )
     ).order_by(BackupLog.servidor, BackupLog.tipo_backup).all()
 
-    # CAPTURA A VERSÃO DA VARIÁVEL DE AMBIENTE (COM FALLBACK)
     versao_app = os.environ.get('APP_VERSION', 'dev-local')
-
     return render_template('index.html', backups=ultimos_backups, version=versao_app)
+
+@app.route('/historico')
+def historico():
+    # Coleta de Parâmetros de Filtro e Página atual (padrão é 1)
+    filtro_servidor = request.args.get('servidor', '')
+    filtro_status = request.args.get('status', '')
+    filtro_tipo = request.args.get('tipo_backup', '')
+    page = request.args.get('page', 1, type=int)
+
+    # Constrói a Query Dinamicamente
+    query = BackupLog.query
+    if filtro_servidor: query = query.filter(BackupLog.servidor == filtro_servidor)
+    if filtro_status: query = query.filter(BackupLog.status == filtro_status)
+    if filtro_tipo: query = query.filter(BackupLog.tipo_backup == filtro_tipo)
+
+    # =======================================================
+    # SOLUÇÃO DE PERFORMANCE: Paginação Real no Banco (15 por pág)
+    # =======================================================
+    paginacao = query.order_by(BackupLog.id.desc()).paginate(page=page, per_page=15, error_out=False)
+
+    # Gráficos: Limitado aos últimos 100 registros do filtro para não travar o Chart.js
+    grafico_backups = query.order_by(BackupLog.id.desc()).limit(100).all()
+
+    # Busca lista de servidores únicos para popular o combobox do filtro
+    servidores_unicos = [s[0] for s in db.session.query(BackupLog.servidor).distinct().all()]
+
+    # ===============================
+    # PROCESSAMENTO DOS GRÁFICOS
+    # ===============================
+    sucesso = sum(1 for b in grafico_backups if b.status == 'SUCESSO')
+    falha = sum(1 for b in grafico_backups if b.status == 'FALHA')
+    progresso = sum(1 for b in grafico_backups if b.status == 'EM PROGRESSO')
+
+    datas_dict = {}
+    for b in reversed(grafico_backups): # Do mais antigo pro mais novo dentro do limite
+        dia = str(b.data_inicio)[:10] if b.data_inicio else "N/A"
+        if dia not in datas_dict:
+            datas_dict[dia] = {'sucesso': 0, 'falha': 0}
+        if b.status == 'SUCESSO': datas_dict[dia]['sucesso'] += 1
+        elif b.status == 'FALHA': datas_dict[dia]['falha'] += 1
+
+    labels_linha = list(datas_dict.keys())
+    dados_sucesso = [datas_dict[d]['sucesso'] for d in labels_linha]
+    dados_falha = [datas_dict[d]['falha'] for d in labels_linha]
+
+    versao_app = os.environ.get('APP_VERSION', 'dev-local')
+    
+    # Envia a variável 'paginacao' em vez de 'backups' para a tela
+    return render_template('historico.html', 
+                           paginacao=paginacao, 
+                           servidores=servidores_unicos,
+                           filtros={'servidor': filtro_servidor, 'status': filtro_status, 'tipo': filtro_tipo},
+                           grafico_pizza=[sucesso, falha, progresso],
+                           grafico_linha={'labels': labels_linha, 'sucesso': dados_sucesso, 'falha': dados_falha},
+                           version=versao_app)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
