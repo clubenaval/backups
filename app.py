@@ -22,8 +22,8 @@ class BackupLog(db.Model):
     servidor = db.Column(db.String(100), nullable=False)
     tipo_backup = db.Column(db.String(20), nullable=False)
     status = db.Column(db.String(20), nullable=False)
-    data_inicio = db.Column(db.String(50))   # <-- NOVA COLUNA
-    data_fim = db.Column(db.String(50))      # <-- NOVA COLUNA
+    data_inicio = db.Column(db.String(50))
+    data_fim = db.Column(db.String(50))
     espaco_livre_origem = db.Column(db.String(20))
     uso_percentual_origem = db.Column(db.String(10))
     espaco_livre_destino = db.Column(db.String(20))
@@ -76,7 +76,6 @@ def registrar_backup():
 
 @app.route('/')
 def dashboard():
-    # AGORA AGRUPA POR SERVIDOR E TIPO DE BACKUP (Para ter card do full e incremental separados)
     subquery = db.session.query(
         BackupLog.servidor,
         BackupLog.tipo_backup,
@@ -92,7 +91,10 @@ def dashboard():
         )
     ).order_by(BackupLog.servidor, BackupLog.tipo_backup).all()
 
-    return render_template('index.html', backups=ultimos_backups)
+    # CAPTURA A VERSÃO DA VARIÁVEL DE AMBIENTE (COM FALLBACK)
+    versao_app = os.environ.get('APP_VERSION', 'dev-local')
+
+    return render_template('index.html', backups=ultimos_backups, version=versao_app)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
