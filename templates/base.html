@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Backups - Clube Naval</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    {% block head_scripts %}{% endblock %}
+
+    <style>
+        :root {
+            --cn-red: #c62828;
+            --cn-red-dark: #8e0000;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --success: #2e7d32;
+            --progress: #1976d2;
+        }
+
+        /* =========================================
+           NOVO COMPORTAMENTO DO BODY (FLEXBOX)
+        ========================================= */
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 0; 
+            overflow-y: scroll; 
+            display: flex;             /* Habilita o Flexbox */
+            flex-direction: column;    /* Empilha Topo -> Miolo -> Rodapé */
+            min-height: 100vh;         /* Garante que ocupe sempre 100% da altura da tela */
+        }
+        
+        /* O miolo da página vai crescer e empurrar o rodapé */
+        .main-content {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* CABEÇALHO E LOGO */
+        .main-header { background-color: var(--cn-red); padding: 20px 30px; display: flex; justify-content: center; }
+        .header-content { display: flex; align-items: center; justify-content: center; max-width: 1400px; width: 100%; gap: 25px; }
+        .header-logo { height: 80px; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); transition: transform 0.3s ease; }
+        .header-logo:hover { transform: scale(1.05); }
+        .header-titles { display: flex; flex-direction: column; justify-content: center; text-align: center; }
+        .header-titles h1 { margin: 0; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: 1px; }
+        .header-titles .header-subtitle { font-size: 13px; font-weight: 700; color: #ffcccc; letter-spacing: 3px; margin-top: 4px; }
+
+        @media (max-width: 768px) { 
+            .header-content { flex-direction: column; gap: 15px; }
+            .header-titles h1 { font-size: 22px; }
+            .main-header { padding: 15px; }
+        }
+
+        /* NAVBAR MINIMALISTA COM MENU HAMBÚRGUER */
+        .navbar { 
+            background-color: var(--cn-red-dark); 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        }
+        .navbar-container {
+            display: flex; 
+            justify-content: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .navbar-links {
+            display: flex;
+            justify-content: center;
+        }
+        .navbar-links a { 
+            text-decoration: none; 
+            padding: 16px 25px; 
+            font-weight: 600; 
+            font-size: 14px; 
+            color: #ffcccc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 4px solid transparent; 
+            transition: all 0.2s ease;
+            text-transform: uppercase; 
+            letter-spacing: 1px;
+        }
+        .navbar-links a:hover { 
+            color: #ffffff; 
+            border-bottom: 4px solid rgba(255, 255, 255, 0.3); 
+        }
+        .navbar-links a.active { 
+            color: #ffffff; 
+            font-weight: 800;
+            border-bottom: 4px solid #ffffff; 
+        }
+
+        .menu-toggle {
+            display: none; background: none; border: none; color: #ffffff;
+            font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+            padding: 15px 20px; cursor: pointer; width: 100%; justify-content: center;
+            align-items: center; gap: 10px; transition: background 0.3s;
+        }
+        .menu-toggle:hover { background-color: rgba(255,255,255,0.05); }
+
+        @media (max-width: 768px) {
+            .navbar-container { flex-direction: column; }
+            .menu-toggle { display: flex; }
+            .navbar-links { flex-direction: column; width: 100%; max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
+            .navbar-links.show { max-height: 250px; }
+            .navbar-links a { width: 100%; justify-content: center; border-bottom: none; border-left: 4px solid transparent; padding: 14px 0; background-color: rgba(0,0,0,0.1); border-top: 1px solid rgba(255,255,255,0.05); }
+            .navbar-links a.active { border-bottom: none; border-left: 4px solid #ffffff; background-color: rgba(255, 255, 255, 0.05); }
+            .navbar-links a:hover { border-bottom: none; border-left: 4px solid rgba(255, 255, 255, 0.3); }
+        }
+
+        /* =========================================
+           RODAPÉ FLUTUANTE (NÃO É MAIS FIXED)
+        ========================================= */
+        .site-footer {
+            width: 100%; 
+            min-height: 5px;
+            padding: 8px 0;
+            background-color: var(--cn-red); 
+            border-top: 3px solid var(--cn-red-dark);
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            font-size: 13px; 
+            gap: 15px; 
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+        }
+        .footer-text { color: #ffcccc; }
+        .footer-text a { color: #ffffff; text-decoration: none; font-weight: 700; transition: all 0.2s; }
+        .footer-text a:hover { color: #ffeb3b; }
+        .footer-separator { color: #ff9999; opacity: 0.6; }
+        .footer-version { color: #ffffff; background: rgba(0, 0, 0, 0.2); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.2); font-family: monospace; font-weight: bold; }
+
+        @media (max-width: 768px) {
+            .site-footer { flex-direction: column; gap: 8px; text-align: center; }
+            .footer-separator { display: none; }
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="header-content">
+            <a href="/">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo Clube Naval" class="header-logo">
+            </a>
+            <div class="header-titles">
+                <h1>SISTEMA DE GESTÃO DE BACKUPS</h1>
+                <span class="header-subtitle">CLUBE NAVAL - ASSESSORIA DE TI</span>
+            </div>
+        </div>
+    </header>
+
+    <nav class="navbar">
+        <div class="navbar-container">
+            <button class="menu-toggle" id="mobile-menu-btn">
+                <i class="fas fa-bars"></i> Menu
+            </button>
+            <div class="navbar-links" id="navbar-links">
+                <a href="/" class="{% if request.endpoint == 'dashboard' %}active{% else %}inactive{% endif %}">
+                    <i class="fas fa-desktop"></i> Monitoramento
+                </a>
+                <a href="/historico" class="{% if request.endpoint == 'historico' %}active{% else %}inactive{% endif %}">
+                    <i class="fas fa-history"></i> Histórico
+                </a>
+                <a href="#" class="inactive" onclick="alert('O módulo de monitoramento de Vmwares está em desenvolvimento.'); return false;">
+                    <i class="fas fa-server"></i> Vmwares
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <span class="footer-text">Desenvolvido por <a href="https://henrique.tec.br" target="_blank">Henrique Fagundes</a></span>
+        <span class="footer-separator">|</span>
+        <span class="footer-text">Todos os Direitos Reservados</span>
+        <span class="footer-separator">|</span>
+        <span class="footer-version"><i class="fas fa-code-branch"></i> {{ version }}</span>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            const navLinks = document.getElementById('navbar-links');
+            
+            if(menuBtn) {
+                menuBtn.addEventListener('click', function() {
+                    navLinks.classList.toggle('show');
+                    const icon = menuBtn.querySelector('i');
+                    if (navLinks.classList.contains('show')) {
+                        icon.classList.remove('fa-bars');
+                        icon.classList.add('fa-times');
+                    } else {
+                        icon.classList.remove('fa-times');
+                        icon.classList.add('fa-bars');
+                    }
+                });
+            }
+        });
+    </script>
+
+    {% block bottom_scripts %}{% endblock %}
+
+</body>
+</html>
