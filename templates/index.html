@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Backups - Clube Naval</title>
+    <style>
+        :root {
+            --cn-red: #c62828;
+            --cn-red-dark: #8e0000;
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --success: #2e7d32;
+            --progress: #1976d2; /* Azul para "Em Progresso" */
+        }
+
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; }
+        header { background-color: var(--cn-red); color: white; padding: 15px 0; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        header h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+
+        .container {
+            max-width: 100%;
+            margin: 30px auto;
+            padding: 0 30px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) { .container { grid-template-columns: 1fr; padding: 0 15px; } }
+
+        .card { background-color: var(--card-bg); border-radius: 6px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; transition: transform 0.2s ease; border-top: 4px solid var(--cn-red); }
+        .card:hover { transform: translateY(-3px); }
+        
+        .card-header { padding: 10px 15px; border-bottom: 1px solid #eeeeee; display: flex; justify-content: space-between; align-items: center; }
+        .server-name { font-size: 15px; font-weight: bold; color: var(--cn-red-dark); margin: 0; }
+        
+        .badge { padding: 5px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; display: inline-flex; align-items: center; gap: 6px; }
+        .badge.sucesso { background-color: var(--success); }
+        .badge.falha { background-color: var(--cn-red); }
+        .badge.em-progresso { background-color: var(--progress); }
+
+        /* A PARADINHA RODANDO (SPINNER) */
+        .spinner {
+            width: 12px; height: 12px;
+            border: 2px solid rgba(255,255,255,0.4);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .card-body { padding: 15px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
+        .info-label { color: var(--text-muted); font-weight: 600; }
+        .info-value { font-weight: 500; text-align: right; }
+        .divider { height: 1px; background-color: #eeeeee; margin: 10px 0; }
+        .path-info { font-family: monospace; font-size: 11px; color: var(--text-muted); background-color: #f9f9f9; padding: 6px; border-radius: 4px; word-break: break-all; }
+        .progress-container { width: 100%; background-color: #e0e0e0; border-radius: 4px; margin-top: 4px; height: 6px; overflow: hidden; }
+        .progress-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease-in-out; }
+        .storage-block { margin-bottom: 10px; }
+        .storage-header { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
+        .storage-title { color: var(--text-muted); font-weight: 600; }
+        .storage-value { font-weight: bold; }
+        footer { text-align: center; padding: 15px; color: var(--text-muted); font-size: 12px; margin-top: 30px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>STATUS DE BACKUP - CLUBE NAVAL</h1>
+    </header>
+
+    <div class="container">
+        {% if backups %}
+            {% for bkp in backups %}
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="server-name">{{ bkp.servidor }} <span style="font-size:11px; color:#666;">({{ bkp.tipo_backup }})</span></h2>
+                    
+                    {% set status_class = bkp.status | lower | replace(' ', '-') %}
+                    <span class="badge {{ status_class }}">
+                        {% if bkp.status == 'EM PROGRESSO' %}<div class="spinner"></div>{% endif %}
+                        {{ bkp.status }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="info-row">
+                        <span class="info-label">Início</span>
+                        <span class="info-value">{{ bkp.data_inicio }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Fim</span>
+                        <span class="info-value" style="{% if bkp.status == 'EM PROGRESSO' %}color: var(--progress); font-style: italic;{% endif %}">{{ bkp.data_fim }}</span>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    {% set pct_origem = bkp.uso_percentual_origem|replace('%', '')|int %}
+                    {% if pct_origem > 90 %} {% set cor_origem = '#c62828' %}
+                    {% elif pct_origem > 75 %} {% set cor_origem = '#ff9800' %}
+                    {% else %} {% set cor_origem = '#2e7d32' %} {% endif %}
+
+                    <div class="storage-block">
+                        <div class="storage-header">
+                            <span class="storage-title">Uso Origem</span>
+                            <span class="storage-value">{{ bkp.uso_percentual_origem }} (Livre: {{ bkp.espaco_livre_origem }})</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: {{ bkp.uso_percentual_origem }}; background-color: {{ cor_origem }};"></div>
+                        </div>
+                    </div>
+
+                    {% set pct_destino = bkp.uso_percentual_destino|replace('%', '')|int %}
+                    {% if pct_destino > 90 %} {% set cor_destino = '#c62828' %}
+                    {% elif pct_destino > 75 %} {% set cor_destino = '#ff9800' %}
+                    {% else %} {% set cor_destino = '#2e7d32' %} {% endif %}
+
+                    <div class="storage-block">
+                        <div class="storage-header">
+                            <span class="storage-title">Uso NAS</span>
+                            <span class="storage-value">{{ bkp.uso_percentual_destino }} (Livre: {{ bkp.espaco_livre_destino }})</span>
+                        </div>
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: {{ bkp.uso_percentual_destino }}; background-color: {{ cor_destino }};"></div>
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="info-row">
+                        <span class="info-label">Gerado:</span>
+                    </div>
+                    <div class="path-info">{{ bkp.diretorio_gerado }}</div>
+
+                    <div class="info-row" style="margin-top: 8px;">
+                        <span class="info-label">Expirar:</span>
+                    </div>
+                    <div class="path-info" style="color: var(--cn-red);">{{ bkp.proximo_a_expirar }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div style="grid-column: 1 / -1; text-align: center; color: #666; padding: 50px;">
+                <h2>Nenhum dado de backup recebido ainda.</h2>
+            </div>
+        {% endif %}
+    </div>
+    <footer>Desenvolvido por Henrique Fagundes &bull; Infraestrutura</footer>
+
+    <script>
+            // Atualiza apenas os cards silenciosamente a cada 5 segundos
+            setInterval(() => {
+                fetch(window.location.href)
+                    .then(response => response.text())
+                    .then(html => {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newContainer = doc.querySelector('.container').innerHTML;
+                        document.querySelector('.container').innerHTML = newContainer;
+                    })
+                    .catch(err => console.error('Erro ao atualizar painel:', err));
+            }, 5000);
+        </script>
+</body>
+</html>
+</body>
+</html>

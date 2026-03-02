@@ -1,0 +1,39 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: db
+    hostname: db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_segura
+      MYSQL_DATABASE: backups_db
+      MYSQL_USER: app_user
+      MYSQL_PASSWORD: app_password_segura
+      TZ: America/Sao_Paulo
+    ports:
+      - "3306:3306"
+    volumes:
+      - /srv/bkp/db:/var/lib/mysql
+    networks:
+      - backup_net
+
+  web:
+    build: .
+    container_name: dashboard
+    hostname: dashboard
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=db
+      - DB_USER=app_user
+      - DB_PASSWORD=app_password_segura
+      - DB_NAME=backups_db
+      - TZ=America/Sao_Paulo
+    depends_on:
+      - db
+    networks:
+      - backup_net
+
+networks:
+  backup_net:
