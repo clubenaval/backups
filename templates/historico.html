@@ -13,9 +13,61 @@
             --success: #2e7d32; --progress: #1976d2;
         }
 
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding-bottom: 70px; }
-        header { background-color: var(--cn-red); color: white; padding: 15px 0; text-align: center; }
-        header h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding-bottom: 70px; overflow-y: scroll; }
+        
+        /* =========================================
+           CABEÇALHO VERMELHO CENTRALIZADO
+        ========================================= */
+        .main-header { 
+            background-color: var(--cn-red); 
+            padding: 20px 30px; 
+            display: flex; 
+            justify-content: center; 
+        }
+        .header-content { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            max-width: 1400px; 
+            width: 100%; 
+            gap: 25px; 
+        }
+        .header-logo { 
+            height: 80px; 
+            width: auto; 
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            transition: transform 0.3s ease;
+        }
+        .header-logo:hover {
+            transform: scale(1.05);
+        }
+        .header-titles { 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            text-align: center; 
+        }
+        .header-titles h1 { 
+            margin: 0; 
+            font-size: 26px; 
+            font-weight: 800; 
+            color: #ffffff; 
+            letter-spacing: 1px; 
+        }
+        .header-titles .header-subtitle { 
+            font-size: 13px; 
+            font-weight: 700; 
+            color: #ffcccc; 
+            letter-spacing: 3px; 
+            margin-top: 4px; 
+        }
+
+        @media (max-width: 768px) { 
+            .header-content { flex-direction: column; gap: 15px; }
+            .header-titles h1 { font-size: 22px; }
+            .main-header { padding: 15px; }
+        }
+        /* ========================================= */
 
         .navbar { background-color: var(--cn-red-dark); padding: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .navbar a { text-decoration: none; margin: 0 20px; font-weight: bold; font-size: 14px; transition: 0.2s; }
@@ -62,7 +114,15 @@
 </head>
 <body>
 
-    <header><h1>STATUS DE BACKUP - CLUBE NAVAL</h1></header>
+    <header class="main-header">
+        <div class="header-content">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo Clube Naval" class="header-logo">
+            <div class="header-titles">
+                <h1>SISTEMA DE GESTÃO DE BACKUPS</h1>
+                <span class="header-subtitle">CLUBE NAVAL - DEPARTAMENTO DE TI</span>
+            </div>
+        </div>
+    </header>
 
     <nav class="navbar">
         <a href="/" class="inactive"><i class="fas fa-desktop"></i> Monitoramento (Tempo Real)</a>

@@ -14,7 +14,7 @@
             --text-main: #333333;
             --text-muted: #666666;
             --success: #2e7d32;
-            --progress: #1976d2; /* Azul para "Em Progresso" */
+            --progress: #1976d2;
         }
 
         body { 
@@ -23,12 +23,63 @@
             color: var(--text-main); 
             margin: 0; 
             padding: 0; 
-            padding-bottom: 70px; /* Garante que o conteúdo não fique escondido sob o rodapé fixo */
-            overflow-y: scroll; /* FORÇA A BARRA DE ROLAGEM A SEMPRE APARECER */
+            padding-bottom: 70px; 
+            overflow-y: scroll; 
         }
         
-        header { background-color: var(--cn-red); color: white; padding: 15px 0; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        header h1 { margin: 0; font-size: 20px; letter-spacing: 1px; }
+        /* =========================================
+           CABEÇALHO VERMELHO CENTRALIZADO
+        ========================================= */
+        .main-header { 
+            background-color: var(--cn-red); 
+            padding: 20px 30px; 
+            display: flex; 
+            justify-content: center; 
+        }
+        .header-content { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; /* Mantém logo e texto centralizados no meio da tela */
+            max-width: 1400px; 
+            width: 100%; 
+            gap: 25px; 
+        }
+        .header-logo { 
+            height: 80px; 
+            width: auto; 
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); /* Leve sombra para destacar a logo transparente */
+            transition: transform 0.3s ease;
+        }
+        .header-logo:hover {
+            transform: scale(1.05);
+        }
+        .header-titles { 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            text-align: center; /* Força o alinhamento central dos textos */
+        }
+        .header-titles h1 { 
+            margin: 0; 
+            font-size: 26px; 
+            font-weight: 800; 
+            color: #ffffff; 
+            letter-spacing: 1px; 
+        }
+        .header-titles .header-subtitle { 
+            font-size: 13px; 
+            font-weight: 700; 
+            color: #ffcccc; /* Tom rosado/claro para combinar com o fundo vermelho */
+            letter-spacing: 3px; 
+            margin-top: 4px; 
+        }
+
+        @media (max-width: 768px) { 
+            .header-content { flex-direction: column; gap: 15px; }
+            .header-titles h1 { font-size: 22px; }
+            .main-header { padding: 15px; }
+        }
+        /* ========================================= */
 
         /* Navbar de Transição */
         .navbar { background-color: var(--cn-red-dark); padding: 12px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -59,7 +110,6 @@
         .badge.falha { background-color: var(--cn-red); }
         .badge.em-progresso { background-color: var(--progress); }
 
-        /* A PARADINHA RODANDO (SPINNER) */
         .spinner {
             width: 12px; height: 12px;
             border: 2px solid rgba(255,255,255,0.4);
@@ -82,9 +132,6 @@
         .storage-title { color: var(--text-muted); font-weight: 600; }
         .storage-value { font-weight: bold; }
         
-        /* =========================================
-           RODAPÉ FIXO E CENTRALIZADO
-        ========================================= */
         .fixed-footer {
             position: fixed;
             bottom: 0;
@@ -102,25 +149,10 @@
             box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
         }
 
-        .footer-text {
-            color: var(--text-muted);
-        }
-        
-        .footer-text a {
-            color: var(--cn-red);
-            text-decoration: none;
-            font-weight: 700;
-            transition: all 0.2s;
-        }
-
-        .footer-text a:hover {
-            color: var(--cn-red-dark);
-        }
-
-        .footer-separator {
-            color: var(--text-muted);
-            opacity: 0.5;
-        }
+        .footer-text { color: var(--text-muted); }
+        .footer-text a { color: var(--cn-red); text-decoration: none; font-weight: 700; transition: all 0.2s; }
+        .footer-text a:hover { color: var(--cn-red-dark); }
+        .footer-separator { color: var(--text-muted); opacity: 0.5; }
 
         .footer-version {
             color: var(--cn-red-dark);
@@ -133,20 +165,21 @@
         }
 
         @media (max-width: 768px) {
-            .fixed-footer { 
-                height: auto; 
-                padding: 10px 5px; 
-                flex-direction: column;
-                gap: 5px; 
-            }
+            .fixed-footer { height: auto; padding: 10px 5px; flex-direction: column; gap: 5px; }
             .footer-separator { display: none; }
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>STATUS DE BACKUP - CLUBE NAVAL</h1>
+    <header class="main-header">
+        <div class="header-content">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo Clube Naval" class="header-logo">
+            <div class="header-titles">
+                <h1>SISTEMA DE GESTÃO DE BACKUPS</h1>
+                <span class="header-subtitle">CLUBE NAVAL - DEPARTAMENTO DE TI</span>
+            </div>
+        </div>
     </header>
 
     <nav class="navbar">
