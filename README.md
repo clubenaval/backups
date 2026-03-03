@@ -15,10 +15,15 @@ O sistema possui uma arquitetura baseada em microsserviços (Docker), composta p
 ## ✨ Funcionalidades Principais
 
 * 🖥️ **Monitoramento em Tempo Real:** Painel de NOC com atualização silenciosa assíncrona (AJAX), ideal para exibição em TVs.
+  
 * 💽 **Micro-HDDs Virtuais (UI Avançada):** O painel lê dinamicamente a topologia de discos físicos (`/dev/*`) dos servidores de origem e os desenha como "Hard Disks" em puro CSS, com simulação de barramento SATA, LED de atividade e preenchimento condicional de acordo com o armazenamento.
+  
 * 📊 **Histórico e Dashboards Analíticos:** Telas de relatórios com paginação, filtros avançados e gráficos renderizados via *Chart.js*.
+  
 * 🐳 **Arquitetura 100% Docker:** Aplicação e banco de dados isolados em containers, garantindo portabilidade, resiliência e facilidade de deploy.
+  
 * 🚀 **CI/CD Integrado:** Pipeline configurado no GitHub Actions para build e publicação automática de imagens no GHCR (*GitHub Container Registry*).
+  
 * ⚙️ **Integração Universal:** Agentes em Bash que interceptam comandos do sistema (`df`, `rsync`, `tar`) e enviam *payloads* em JSON para a API.
 
 ---
@@ -26,9 +31,12 @@ O sistema possui uma arquitetura baseada em microsserviços (Docker), composta p
 ## 🏗️ Arquitetura e Componentes
 
 O ambiente é orquestrado via `docker-compose.yml` e conta com os seguintes serviços:
+
 1. **`db` (MySQL 8.0):** Armazena os logs de backup e a topologia em JSON dos discos dos servidores. Possui persistência mapeada via volumes.
-2. **`web` (Flask App):** Container da aplicação Python (construído a partir do `Dockerfile` baseado em `python:3.11-slim`), expondo a API na porta `5000`.
-3. **Agentes (Scripts Bash):** Executados remotamente via `cron` nos servidores da infraestrutura, enviando dados para a API do container `web`.
+   
+3. **`web` (Flask App):** Container da aplicação Python (construído a partir do `Dockerfile` baseado em `python:3.11-slim`), expondo a API na porta `5000`.
+   
+5. **Agentes (Scripts Bash):** Executados remotamente via `cron` nos servidores da infraestrutura, enviando dados para a API do container `web`.
 
 ---
 
@@ -40,21 +48,19 @@ O ambiente é orquestrado via `docker-compose.yml` e conta com os seguintes serv
 
 ### Instalação Rápida
 1. Clone o repositório:
-   ```bash
-   git clone [https://github.com/seu-usuario/backups-clubenaval.git](https://github.com/seu-usuario/backups-clubenaval.git)
-   cd backups-clubenaval
 
+```
+git clone https://github.com/clubenaval/backups.git
+cd backups
 ```
 
 2. Ajuste as credenciais e variáveis no arquivo `docker-compose.yml` (se necessário):
 * `MYSQL_ROOT_PASSWORD`, `MYSQL_USER`, `MYSQL_PASSWORD`
 * Certifique-se de que o diretório de persistência do volume do banco (`/srv/bkp/db`) exista ou altere para um volume nomeado padrão.
 
-
 3. Suba a stack em modo *detached*:
-```bash
+```
 docker-compose up -d --build
-
 ```
 
 A aplicação estará disponível no endereço `http://IP_DO_SERVIDOR:5000`. O banco de dados e as tabelas são provisionados automaticamente na primeira inicialização do container Python.
@@ -71,9 +77,9 @@ O script `deploy.sh` foi criado para gerenciar o versionamento de forma segura.
 
 1. Trabalhe as suas alterações na branch `dev`.
 2. Quando estiver pronto, execute o script de deploy na raiz do projeto:
-```bash
-./deploy.sh
 
+```
+./deploy.sh
 ```
 
 3. **O que o script faz?**
@@ -93,14 +99,14 @@ Para adicionar um novo servidor ao NOC, inclua a seguinte lógica no script de b
 1. **Geração Mágica da Topologia (Discos Físicos):**
 Use o comando `awk` abaixo para mapear apenas discos locais válidos (`/dev/*`) e transformá-los num JSON inline compatível com a API:
 
-```bash
-DISCOS_JSON="["$(df -hP | awk 'NR>1 && $1 ~ /^\/dev\// { printf "{\"fs\":\"%s\", \"uso\":\"%s\", \"mount\":\"%s\", \"size\":\"%s\"},", $1, $5, $6, $2 }' | sed 's/,$//')"]"
-
 ```
+DISCOS_JSON="["$(df -hP | awk 'NR>1 && $1 ~ /^\/dev\// { printf "{\"fs\":\"%s\", \"uso\":\"%s\", \"mount\":\"%s\", \"size\":\"%s\"},", $1, $5, $6, $2 }' | sed 's/,$//')"]"
+```
+
 2. **Envio à API via cURL:**
 Crie um payload estruturado e dispare o POST:
 
-```bash
+```
 API_URL="http://IP_DO_DASHBOARD:5000/api/backup"
 
 cat <<EOF > /tmp/payload.json
@@ -123,7 +129,6 @@ EOF
 
 curl -s -X POST -H "Content-Type: application/json" -d @/tmp/payload.json "$API_URL"
 rm -f /tmp/payload.json
-
 ```
 
 ---
