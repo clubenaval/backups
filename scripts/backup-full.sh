@@ -38,6 +38,11 @@ enviar_dashboard() {
     local expirar="$8"
     local d_inicio="$9"
     local d_fim="${10}"
+    local d_origem="${11}"
+    local discos="${12}"
+
+    if [ -z "$discos" ]; then discos="[]"; fi
+    if [ -z "$d_origem" ]; then d_origem="N/A"; fi
 
     cat <<EOF > /tmp/payload_bkp.json
 {
@@ -52,14 +57,19 @@ enviar_dashboard() {
     "proximo_a_expirar": "$expirar",
     "detalhes_erro": "$detalhes",
     "data_inicio": "$d_inicio",
-    "data_fim": "$d_fim"
+    "data_fim": "$d_fim",
+    "diretorio_origem": "$d_origem",
+    "discos_origem": $discos
 }
 EOF
     curl -s -X POST -H "Content-Type: application/json" -d @/tmp/payload_bkp.json "$API_URL"
     rm -f /tmp/payload_bkp.json
 }
 
-enviar_dashboard "EM PROGRESSO" "Sincronizando arquivos..." "Calculando..." "0%" "Calculando..." "0%" "Aguardando..." "Calculando..." "$DATA_INICIO" "Rodando..."
+# CAPTURA OS DISCOS FÍSICOS E SEUS TAMANHOS (Size)
+DISCOS_JSON="["$(df -hP | awk 'NR>1 && $1 ~ /^\/dev\// { printf "{\"fs\":\"%s\", \"uso\":\"%s\", \"mount\":\"%s\", \"size\":\"%s\"},", $1, $5, $6, $2 }' | sed 's/,$//')"]"
+
+enviar_dashboard "EM PROGRESSO" "Sincronizando arquivos..." "Calculando..." "0%" "Calculando..." "0%" "Aguardando..." "Calculando..." "$DATA_INICIO" "Rodando..." "$DIR_ORIGEM" "$DISCOS_JSON"
 
 mount $DIR_DESTINO 2>&- 1>&-
 verifica_montagem_destino=$(df -h | grep "$NOME_COMPARTILHAMENTO" | awk '{print $6}' | awk -F/ '{print $NF}')
@@ -70,7 +80,6 @@ if [ "$verifica_montagem_destino" = "$NOME_COMPARTILHAMENTO" ]
 	echo "Nele e mostrado o Log de Saida do Backup do servidor $(hostname) no dia $(date +%d/%m/%Y)." >> "$LOG"
 	echo >> "$LOG"
 	
-    # Limpeza Otimizada
     mkdir -p /tmp/vazio
     pastas_antigas=$(ls -1dt $DIR_DESTINO/*/ 2>/dev/null | tail -n +$((RETENCAO + 1)))
     if [ -n "$pastas_antigas" ]; then
@@ -84,11 +93,9 @@ if [ "$verifica_montagem_destino" = "$NOME_COMPARTILHAMENTO" ]
 
     mkdir -p "$DIR_DESTINO/$DATA" 
     
-    # Executa o Rsync (REDIRECIONAMENTO CORRIGIDO)
 	$SYNC "$DIR_ORIGEM/" "$DIR_DESTINO/$DATA/" >> "$LOG" 2>&1
     tar -zcf "$DIR_DESTINO/$DATA/confs.tar.gz" /root /etc /usr/local/bin
 	
-    # Gera o Zip corretamente sem o caminho invisível (/tmp)
     rm -f "$ANEXO"
     zip -j -q "$ANEXO" "$LOG"
 
@@ -102,7 +109,10 @@ if [ "$verifica_montagem_destino" = "$NOME_COMPARTILHAMENTO" ]
 
     DATA_FIM=$(date +"%d/%m/%Y às %H:%M:%S")
 
-    enviar_dashboard "SUCESSO" "" "$LIVRE_ORIGEM" "$USO_ORIGEM" "$LIVRE_DESTINO" "$USO_DESTINO" "$DIR_DESTINO/$DATA" "$PROXIMO_EXPIRAR" "$DATA_INICIO" "$DATA_FIM"
+    # ATUALIZA O JSON NOVAMENTE PARA PEGAR O STATUS FINAL
+    DISCOS_JSON="["$(df -hP | awk 'NR>1 && $1 ~ /^\/dev\// { printf "{\"fs\":\"%s\", \"uso\":\"%s\", \"mount\":\"%s\", \"size\":\"%s\"},", $1, $5, $6, $2 }' | sed 's/,$//')"]"
+
+    enviar_dashboard "SUCESSO" "" "$LIVRE_ORIGEM" "$USO_ORIGEM" "$LIVRE_DESTINO" "$USO_DESTINO" "$DIR_DESTINO/$DATA" "$PROXIMO_EXPIRAR" "$DATA_INICIO" "$DATA_FIM" "$DIR_ORIGEM" "$DISCOS_JSON"
 
     ARQUIVO_TEMP=$(mktemp /tmp/uso_disco.XXXXXX.html)
     VG_LIVRE=$(vgs --noheadings -o vg_free --units g --nosuffix "$VOLUME_GROUP" 2>/dev/null | awk '{print $1}')
@@ -139,11 +149,10 @@ if [ "$verifica_montagem_destino" = "$NOME_COMPARTILHAMENTO" ]
         USO_ORIGEM=$(df -h $DIR_ORIGEM | awk 'NR==2 {print $5}')
         DATA_FIM=$(date +"%d/%m/%Y às %H:%M:%S")
 
-        enviar_dashboard "FALHA" "$erro_msg" "$LIVRE_ORIGEM" "$USO_ORIGEM" "N/A" "0%" "N/A" "N/A" "$DATA_INICIO" "$DATA_FIM"
+        enviar_dashboard "FALHA" "$erro_msg" "$LIVRE_ORIGEM" "$USO_ORIGEM" "N/A" "0%" "N/A" "N/A" "$DATA_INICIO" "$DATA_FIM" "$DIR_ORIGEM" "$DISCOS_JSON"
 
         cat "$LOG" | mutt -s "O Backup FULL do dia $(date +%d/%m/%Y) do Servidor $(hostname | cut -d. -f1) NAO FOI FEITO!" -- "$DESTINATARIO"
 
-	#rm $TEMPS 2>&- 1>&-
   fi
 
 rm -rf /mnt/dados/lixeira/*

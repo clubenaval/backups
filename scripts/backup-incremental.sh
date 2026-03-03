@@ -35,6 +35,11 @@ enviar_dashboard() {
     local expirar="$8"
     local d_inicio="$9"
     local d_fim="${10}"
+    local d_origem="${11}"
+    local discos="${12}"
+
+    if [ -z "$discos" ]; then discos="[]"; fi
+    if [ -z "$d_origem" ]; then d_origem="N/A"; fi
 
     cat <<EOF > /tmp/payload_bkp.json
 {
@@ -49,14 +54,18 @@ enviar_dashboard() {
     "proximo_a_expirar": "$expirar",
     "detalhes_erro": "$detalhes",
     "data_inicio": "$d_inicio",
-    "data_fim": "$d_fim"
+    "data_fim": "$d_fim",
+    "diretorio_origem": "$d_origem",
+    "discos_origem": $discos
 }
 EOF
     curl -s -X POST -H "Content-Type: application/json" -d @/tmp/payload_bkp.json "$API_URL"
     rm -f /tmp/payload_bkp.json
 }
 
-enviar_dashboard "EM PROGRESSO" "Compactando arquivos..." "Calculando..." "0%" "Calculando..." "0%" "Aguardando..." "Calculando..." "$DATA_INICIO" "Rodando..."
+DISCOS_JSON="["$(df -hP | awk 'NR>1 && $1 ~ /^\/dev\// { printf "{\"fs\":\"%s\", \"uso\":\"%s\", \"mount\":\"%s\", \"size\":\"%s\"},", $1, $5, $6, $2 }' | sed 's/,$//')"]"
+
+enviar_dashboard "EM PROGRESSO" "Compactando arquivos..." "Calculando..." "0%" "Calculando..." "0%" "Aguardando..." "Calculando..." "$DATA_INICIO" "Rodando..." "$DIR_ORIGEM" "$DISCOS_JSON"
 
 mount $DIR_DESTINO 2>&- 1>&-
 verifica_montagem_destino=$(df -h | grep "$NOME_COMPARTILHAMENTO" | awk '{print $6}' | awk -F/ '{print $NF}')
@@ -65,7 +74,6 @@ if [ "$verifica_montagem_destino" = "$NOME_COMPARTILHAMENTO" ]
   then
         mkdir -p "$DIR_DESTINO/$DATA/"
         
-        # Limpeza Otimizada
         mkdir -p /tmp/vazio
         pastas_antigas=$(ls -1dt $DIR_DESTINO/*/ 2>/dev/null | tail -n +$((RETENCAO + 1)))
         if [ -n "$pastas_antigas" ]; then
@@ -79,14 +87,12 @@ if [ "$verifica_montagem_destino" = "$NOME_COMPARTILHAMENTO" ]
 
         cd "$DIR_ORIGEM" ; find . -mtime -1 -type f -print | tar -zcf "$DIR_ORIGEM/bkp-inc.tar.gz" --exclude "./lixeira/*" -T -
         
-        # Cabeçalhos do Log
         echo "Este arquivo e para simples conferencia." > "$LOG"
         echo "Nele e mostrado o Log de Saida do Backup do servidor $(hostname) no dia $(date +%d/%m/%Y)." >> "$LOG"
         echo "Essa e uma menssagem automatica, por favor nao responda!" >> "$LOG"
         echo "" >> "$LOG"
         umask u=rwx,g=rwx,o=rwx
         
-        # Executa a Extração (REDIRECIONAMENTO CORRIGIDO)
         tar -zxvf "$DIR_ORIGEM/bkp-inc.tar.gz" --no-same-permissions --no-same-owner -C "$DIR_DESTINO/$DATA/" >> "$LOG" 2>&1
         
         rm "$DIR_ORIGEM/bkp-inc.tar.gz"
@@ -102,7 +108,9 @@ if [ "$verifica_montagem_destino" = "$NOME_COMPARTILHAMENTO" ]
 
     DATA_FIM=$(date +"%d/%m/%Y às %H:%M:%S")
 
-    enviar_dashboard "SUCESSO" "" "$LIVRE_ORIGEM" "$USO_ORIGEM" "$LIVRE_DESTINO" "$USO_DESTINO" "$DIR_DESTINO/$DATA" "$PROXIMO_EXPIRAR" "$DATA_INICIO" "$DATA_FIM"
+    DISCOS_JSON="["$(df -hP | awk 'NR>1 && $1 ~ /^\/dev\// { printf "{\"fs\":\"%s\", \"uso\":\"%s\", \"mount\":\"%s\", \"size\":\"%s\"},", $1, $5, $6, $2 }' | sed 's/,$//')"]"
+
+    enviar_dashboard "SUCESSO" "" "$LIVRE_ORIGEM" "$USO_ORIGEM" "$LIVRE_DESTINO" "$USO_DESTINO" "$DIR_DESTINO/$DATA" "$PROXIMO_EXPIRAR" "$DATA_INICIO" "$DATA_FIM" "$DIR_ORIGEM" "$DISCOS_JSON"
 
     ARQUIVO_TEMP=$(mktemp /tmp/uso_disco.XXXXXX.html)
     VG_LIVRE=$(vgs --noheadings -o vg_free --units g --nosuffix "$VOLUME_GROUP" 2>/dev/null | awk '{print $1}')
@@ -140,9 +148,10 @@ if [ "$verifica_montagem_destino" = "$NOME_COMPARTILHAMENTO" ]
         USO_ORIGEM=$(df -h $DIR_ORIGEM | awk 'NR==2 {print $5}')
         DATA_FIM=$(date +"%d/%m/%Y às %H:%M:%S")
 
-        enviar_dashboard "FALHA" "$erro_msg" "$LIVRE_ORIGEM" "$USO_ORIGEM" "N/A" "0%" "N/A" "N/A" "$DATA_INICIO" "$DATA_FIM"
+        enviar_dashboard "FALHA" "$erro_msg" "$LIVRE_ORIGEM" "$USO_ORIGEM" "N/A" "0%" "N/A" "N/A" "$DATA_INICIO" "$DATA_FIM" "$DIR_ORIGEM" "$DISCOS_JSON"
 
         cat "$LOG" | mutt -s "$ASSUNTO2" -- "$DESTINATARIO"
 
         rm $TEMPS 2>&- 1>&-
   fi
+}

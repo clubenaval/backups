@@ -2,18 +2,22 @@
 
 {% block extra_css %}
 <style>
+    /* Força a remoção da barra de rolagem horizontal */
+    body {
+        overflow-x: hidden !important; 
+    }
+
     .container {
-        max-width: 100% !important; /* Força a ignorar limites do base.html */
+        max-width: 100% !important;
         width: 100%;
         margin: 30px auto;
         padding: 0 30px;
-        box-sizing: border-box; /* Garante que o padding não crie barra de rolagem horizontal */
+        box-sizing: border-box;
         display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important; /* Força a divisão exata em 2 colunas */
+        grid-template-columns: repeat(2, 1fr) !important;
         gap: 20px;
     }
 
-    /* Responsividade para celulares */
     @media (max-width: 768px) { 
         .container { 
             grid-template-columns: 1fr !important; 
@@ -25,16 +29,20 @@
         background-color: var(--card-bg); 
         border-radius: 6px; 
         box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
-        overflow: hidden; 
-        transition: transform 0.2s ease; 
+        overflow: visible; 
         border-top: 4px solid var(--cn-red); 
-        width: 100%; /* Garante que o card ocupe todo o espaço da coluna */
+        width: 100%; 
+        position: relative; 
+        z-index: 1; 
     }
-    .card:hover { transform: translateY(-3px); }
     
-    .card-header { padding: 10px 15px; border-bottom: 1px solid #eeeeee; display: flex; justify-content: space-between; align-items: center; }
+    /* Apenas traz o card para frente para não cortar a Tooltip, SEM animação de pular */
+    .card:hover { 
+        z-index: 100; 
+    }
+    
+    .card-header { padding: 10px 15px; border-bottom: 1px solid #eeeeee; display: flex; justify-content: space-between; align-items: center; border-radius: 6px 6px 0 0; }
 
-    /* Faz o último card ocupar a linha inteira se for ímpar */
     .card:last-child:nth-child(odd) { 
         grid-column: 1 / -1; 
     }
@@ -55,12 +63,151 @@
     .info-value { font-weight: 500; text-align: right; }
     .divider { height: 1px; background-color: #eeeeee; margin: 10px 0; }
     .path-info { font-family: monospace; font-size: 11px; color: var(--text-muted); background-color: #f9f9f9; padding: 6px; border-radius: 4px; word-break: break-all; }
+    
     .progress-container { width: 100%; background-color: #e0e0e0; border-radius: 4px; margin-top: 4px; height: 6px; overflow: hidden; }
     .progress-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease-in-out; }
     .storage-block { margin-bottom: 10px; }
     .storage-header { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
     .storage-title { color: var(--text-muted); font-weight: 600; }
     .storage-value { font-weight: bold; }
+
+    /* ==============================================
+       DESIGN AVANÇADO: MICRO DISCOS RÍGIDOS
+    ============================================== */
+    .disk-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; margin-bottom: 15px; }
+    
+    .disk-block {
+        position: relative;
+        width: 32px;
+        height: 44px;
+        background: linear-gradient(145deg, #2c2e33, #1f2124);
+        border-radius: 4px;
+        box-shadow: 0 3px 5px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.05);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #111;
+        cursor: help;
+        transition: transform 0.2s;
+        z-index: 1; 
+    }
+    
+    /* Disquinhos continuam com a animação suave */
+    .disk-block:hover { 
+        transform: translateY(-3px); 
+        box-shadow: 0 5px 8px rgba(0,0,0,0.3); 
+        z-index: 50; 
+    }
+    
+    .disk-top {
+        position: absolute;
+        top: -1px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 14px;
+        height: 3px;
+        background: repeating-linear-gradient(90deg, #b08d57, #b08d57 1px, #111 1px, #111 2px);
+        border-radius: 1px;
+        z-index: 2;
+    }
+
+    .disk-inner {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.1);
+        background: radial-gradient(circle, #333 30%, #1a1a1a 80%);
+        z-index: 2;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+    }
+
+    .disk-led {
+        position: absolute;
+        bottom: 3px;
+        right: 3px;
+        width: 3px;
+        height: 3px;
+        background-color: #4caf50;
+        border-radius: 50%;
+        box-shadow: 0 0 3px #4caf50;
+        z-index: 4;
+        animation: blink 2s infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    
+    .disk-fill {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        border-radius: 0 0 3px 3px;
+        z-index: 1;
+        opacity: 0.85;
+        transition: height 1.5s ease-in-out;
+        background-image: linear-gradient(to top, rgba(0,0,0,0.4), rgba(255,255,255,0.1));
+    }
+    
+    .disk-use {
+        position: relative;
+        z-index: 3;
+        font-size: 10px;
+        font-weight: 800;
+        color: #ffffff;
+        text-shadow: 0 1px 2px #000, 0 0 4px rgba(0,0,0,0.8);
+        margin-top: 14px;
+    }
+
+    .disk-tooltip {
+        visibility: hidden;
+        position: absolute;
+        bottom: 120%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(20, 20, 20, 0.95);
+        color: #fff;
+        text-align: center;
+        padding: 8px 12px;
+        border-radius: 5px;
+        font-size: 11px;
+        white-space: nowrap;
+        z-index: 10;
+        opacity: 0;
+        transition: opacity 0.2s, bottom 0.2s;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        border: 1px solid rgba(255,255,255,0.15);
+        pointer-events: none;
+    }
+    
+    .disk-tooltip::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: rgba(20, 20, 20, 0.95) transparent transparent transparent;
+    }
+
+    .disk-block:hover .disk-tooltip {
+        visibility: visible;
+        opacity: 1;
+        bottom: 130%; 
+    }
+
+    .disk-block:first-child .disk-tooltip {
+        left: -5px; 
+        transform: none; 
+    }
+    
+    .disk-block:first-child .disk-tooltip::after {
+        left: 21px; 
+        margin-left: 0;
+    }
 </style>
 {% endblock %}
 
@@ -80,24 +227,50 @@
             <div class="card-body">
                 <div class="info-row"><span class="info-label">Início</span><span class="info-value">{{ bkp.data_inicio }}</span></div>
                 <div class="info-row"><span class="info-label">Fim</span><span class="info-value" style="{% if bkp.status == 'EM PROGRESSO' %}color: var(--progress); font-style: italic;{% endif %}">{{ bkp.data_fim }}</span></div>
+                
                 <div class="divider"></div>
                 
-                {% set pct_origem = bkp.uso_percentual_origem|replace('%', '')|int %}
-                {% if pct_origem > 90 %} {% set cor_origem = '#c62828' %}{% elif pct_origem > 75 %} {% set cor_origem = '#ff9800' %}{% else %} {% set cor_origem = '#2e7d32' %} {% endif %}
-                <div class="storage-block">
-                    <div class="storage-header"><span class="storage-title">Uso Origem</span><span class="storage-value">{{ bkp.uso_percentual_origem }} (Livre: {{ bkp.espaco_livre_origem }})</span></div>
-                    <div class="progress-container"><div class="progress-bar" style="width: {{ bkp.uso_percentual_origem }}; background-color: {{ cor_origem }};"></div></div>
+                <div class="info-row"><span class="info-label">Diretório Backupeado:</span></div>
+                <div class="path-info">{{ bkp.diretorio_origem }}</div>
+
+                <div class="storage-header" style="margin-top: 15px;"><span class="storage-title">Armazenamento Físico e Volumes (Origem)</span></div>
+                <div class="disk-grid">
+                    {% if bkp.discos_list %}
+                        {% for disco in bkp.discos_list %}
+                            {% set uso_num = disco.uso | replace('%', '') | int %}
+                            {% if uso_num > 90 %} {% set cor = '#c62828' %}
+                            {% elif uso_num > 75 %} {% set cor = '#ff9800' %}
+                            {% else %} {% set cor = '#2e7d32' %} {% endif %}
+                            
+                            <div class="disk-block">
+                                <div class="disk-top"></div>
+                                <div class="disk-inner"></div>
+                                <div class="disk-led"></div>
+                                
+                                <div class="disk-fill" style="height: {{ disco.uso }}; background-color: {{ cor }};"></div>
+                                <span class="disk-use">{{ disco.uso }}</span>
+                                
+                                <div class="disk-tooltip">
+                                    <strong style="color: #ffcccc; letter-spacing: 1px;">{{ disco.mount }}</strong><br>
+                                    <span style="color: #fff; font-size: 11px;">Tamanho: {{ disco.size | default('N/A') }}</span><br>
+                                    <span style="color: #aaa; font-size: 10px; font-family: monospace;">{{ disco.fs }}</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <span style="font-size:11px; color:var(--text-muted); font-style: italic;">Aguardando nova sincronização de discos...</span>
+                    {% endif %}
                 </div>
 
                 {% set pct_destino = bkp.uso_percentual_destino|replace('%', '')|int %}
                 {% if pct_destino > 90 %} {% set cor_destino = '#c62828' %}{% elif pct_destino > 75 %} {% set cor_destino = '#ff9800' %}{% else %} {% set cor_destino = '#2e7d32' %} {% endif %}
-                <div class="storage-block">
-                    <div class="storage-header"><span class="storage-title">Uso NAS</span><span class="storage-value">{{ bkp.uso_percentual_destino }} (Livre: {{ bkp.espaco_livre_destino }})</span></div>
+                <div class="storage-block" style="margin-top: 15px;">
+                    <div class="storage-header"><span class="storage-title">Uso NAS (Destino)</span><span class="storage-value">{{ bkp.uso_percentual_destino }} (Livre: {{ bkp.espaco_livre_destino }})</span></div>
                     <div class="progress-container"><div class="progress-bar" style="width: {{ bkp.uso_percentual_destino }}; background-color: {{ cor_destino }};"></div></div>
                 </div>
 
                 <div class="divider"></div>
-                <div class="info-row"><span class="info-label">Gerado:</span></div>
+                <div class="info-row"><span class="info-label">Gerado no NAS:</span></div>
                 <div class="path-info">{{ bkp.diretorio_gerado }}</div>
                 <div class="info-row" style="margin-top: 8px;"><span class="info-label">Expirar:</span></div>
                 <div class="path-info" style="color: var(--cn-red);">{{ bkp.proximo_a_expirar }}</div>

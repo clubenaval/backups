@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import desc, func  # <--- IMPORTAÇÃO CORRIGIDA AQUI
+from sqlalchemy import desc, func
 import os
 import time
+import json
 
 app = Flask(__name__)
 
@@ -32,6 +33,10 @@ class BackupLog(db.Model):
     diretorio_gerado = db.Column(db.String(255))
     proximo_a_expirar = db.Column(db.String(255))
     detalhes_erro = db.Column(db.Text, nullable=True)
+    
+    # NOVAS COLUNAS DO DESAFIO
+    diretorio_origem = db.Column(db.String(255), nullable=True)
+    discos_origem = db.Column(db.Text, nullable=True)
 
 def init_db():
     retries = 5
@@ -53,6 +58,13 @@ def registrar_backup():
     try:
         dados = request.get_json()
         
+        # Validação do JSON dos discos enviado pelo Bash
+        discos_raw = dados.get('discos_origem', '[]')
+        if isinstance(discos_raw, list):
+            discos_json = json.dumps(discos_raw)
+        else:
+            discos_json = discos_raw
+            
         novo_log = BackupLog(
             servidor=dados.get('servidor'),
             tipo_backup=dados.get('tipo_backup'),
@@ -65,7 +77,9 @@ def registrar_backup():
             uso_percentual_destino=dados.get('uso_percentual_destino', '0%'),
             diretorio_gerado=dados.get('diretorio_gerado', 'N/A'),
             proximo_a_expirar=dados.get('proximo_a_expirar', 'N/A'),
-            detalhes_erro=dados.get('detalhes_erro', '')
+            detalhes_erro=dados.get('detalhes_erro', ''),
+            diretorio_origem=dados.get('diretorio_origem', 'N/A'),
+            discos_origem=discos_json
         )
         
         db.session.add(novo_log)
@@ -92,8 +106,14 @@ def dashboard():
         )
     ).order_by(BackupLog.servidor, BackupLog.tipo_backup).all()
 
-    versao_app = os.environ.get('APP_VERSION', 'dev-local')
+    # Prepara a lista de discos transformando a string JSON em dicionários Python para o HTML
+    for bkp in ultimos_backups:
+        try:
+            bkp.discos_list = json.loads(bkp.discos_origem) if bkp.discos_origem else []
+        except:
+            bkp.discos_list = []
 
+    versao_app = os.environ.get('APP_VERSION', 'dev-local')
     return render_template('index.html', backups=ultimos_backups, version=versao_app)
 
 @app.route('/historico')
