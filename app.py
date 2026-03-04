@@ -33,8 +33,6 @@ class BackupLog(db.Model):
     diretorio_gerado = db.Column(db.String(255))
     proximo_a_expirar = db.Column(db.String(255))
     detalhes_erro = db.Column(db.Text, nullable=True)
-    
-    # NOVAS COLUNAS DO DESAFIO
     diretorio_origem = db.Column(db.String(255), nullable=True)
     discos_origem = db.Column(db.Text, nullable=True)
 
@@ -47,7 +45,7 @@ def init_db():
             print("Tabelas criadas/verificadas com sucesso!")
             break
         except Exception as e:
-            print(f"Aguardando o banco de dados iniciar... ({retries} tentativas restantes)")
+            print(f"A aguardar que a base de dados inicie... ({retries} tentativas restantes)")
             retries -= 1
             time.sleep(5)
 
@@ -58,7 +56,6 @@ def registrar_backup():
     try:
         dados = request.get_json()
         
-        # Validação do JSON dos discos enviado pelo Bash
         discos_raw = dados.get('discos_origem', '[]')
         if isinstance(discos_raw, list):
             discos_json = json.dumps(discos_raw)
@@ -84,7 +81,7 @@ def registrar_backup():
         
         db.session.add(novo_log)
         db.session.commit()
-        return jsonify({'mensagem': 'Log registrado com sucesso!', 'id': novo_log.id}), 201
+        return jsonify({'mensagem': 'Log registado com sucesso!', 'id': novo_log.id}), 201
 
     except Exception as e:
         return jsonify({'erro': str(e)}), 400
@@ -106,15 +103,43 @@ def dashboard():
         )
     ).order_by(BackupLog.servidor, BackupLog.tipo_backup).all()
 
-    # Prepara a lista de discos transformando a string JSON em dicionários Python para o HTML
+    # Prepara a lista de discos transformando a string JSON em dicionários
     for bkp in ultimos_backups:
         try:
             bkp.discos_list = json.loads(bkp.discos_origem) if bkp.discos_origem else []
         except:
             bkp.discos_list = []
 
+    # ====================================================================
+    # LÓGICA DO "HÍBRIDO PERFEITO" (Agrupamento e Ordenação Inteligente)
+    # ====================================================================
+    grupos_dict = {}
+    for bkp in ultimos_backups:
+        if bkp.servidor not in grupos_dict:
+            grupos_dict[bkp.servidor] = []
+        grupos_dict[bkp.servidor].append(bkp)
+        
+    grupos_lista = []
+    for servidor, bkps in grupos_dict.items():
+        has_falha = any(b.status.upper() == 'FALHA' for b in bkps)
+        count = len(bkps)
+        grupos_lista.append({
+            'servidor': servidor,
+            'backups': bkps,
+            'has_falha': has_falha,
+            'count': count
+        })
+        
+    # Ordenação por prioridades:
+    # 1º: Tem Falha? (Verdadeiro sobe para o topo)
+    # 2º: Tem exatamente 2 cartões? (Sobe para ficar logo abaixo das falhas, para a simetria)
+    # 3º: Ordem alfabética pelo nome do servidor
+    grupos_lista.sort(key=lambda g: (not g['has_falha'], g['count'] != 2, g['servidor']))
+
     versao_app = os.environ.get('APP_VERSION', 'dev-local')
-    return render_template('index.html', backups=ultimos_backups, version=versao_app)
+    
+    # Agora passamos os "grupos_servidores" já mastigados para o HTML
+    return render_template('index.html', grupos_servidores=grupos_lista, version=versao_app)
 
 @app.route('/historico')
 def historico():

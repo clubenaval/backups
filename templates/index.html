@@ -2,7 +2,6 @@
 
 {% block extra_css %}
 <style>
-    /* Força a remoção da barra de rolagem horizontal */
     body {
         overflow-x: hidden !important; 
     }
@@ -10,7 +9,7 @@
     .container {
         max-width: 100% !important;
         width: 100%;
-        margin: 20px auto 30px auto; /* Mantém um espaçamento simétrico entre os grupos de servidores */
+        margin: 20px auto 30px auto; 
         padding: 0 30px;
         box-sizing: border-box;
         display: grid !important;
@@ -36,14 +35,12 @@
         z-index: 1; 
     }
     
-    /* Apenas traz o card para a frente para não cortar a Tooltip */
     .card:hover { 
         z-index: 100; 
     }
     
     .card-header { padding: 10px 15px; border-bottom: 1px solid #eeeeee; display: flex; justify-content: space-between; align-items: center; border-radius: 6px 6px 0 0; }
 
-    /* A regra mágica: o último card ímpar ocupa 100% da grelha DENTRO do seu respetivo servidor */
     .card:last-child:nth-child(odd) { 
         grid-column: 1 / -1; 
     }
@@ -72,9 +69,6 @@
     .storage-title { color: var(--text-muted); font-weight: 600; }
     .storage-value { font-weight: bold; }
 
-    /* ==============================================
-       DESIGN AVANÇADO: MICRO DISCOS RÍGIDOS
-    ============================================== */
     .disk-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; margin-bottom: 15px; }
     
     .disk-block {
@@ -213,11 +207,11 @@
 
 {% block content %}
 <div id="dashboard-content">
-    {% if backups %}
-        {% for servidor, bkps_do_servidor in backups|groupby('servidor') %}
+    {% if grupos_servidores %}
+        {% for grupo in grupos_servidores %}
         
         <div class="container">
-            {% for bkp in bkps_do_servidor %}
+            {% for bkp in grupo.backups %}
             <div class="card">
                 <div class="card-header">
                     <h2 class="server-name">{{ bkp.servidor }} <span style="font-size:11px; color:#666;">({{ bkp.tipo_backup }})</span></h2>
@@ -261,7 +255,7 @@
                                 </div>
                             {% endfor %}
                         {% else %}
-                            <span style="font-size:11px; color:var(--text-muted); font-style: italic;">Aguardar nova sincronização de discos...</span>
+                            <span style="font-size:11px; color:var(--text-muted); font-style: italic;">A aguardar nova sincronização de discos...</span>
                         {% endif %}
                     </div>
 
@@ -294,7 +288,6 @@
 
 {% block bottom_scripts %}
 <script>
-    // A função de AJAX foca agora no bloco "#dashboard-content" para não perder a estrutura
     setInterval(() => {
         fetch(window.location.href)
             .then(response => response.text())
