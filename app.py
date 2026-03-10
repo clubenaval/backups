@@ -88,11 +88,12 @@ def registrar_backup():
 
 @app.route('/')
 def dashboard():
+    # O SEGREDO ESTÁ AQUI: Adicionamos o filtro .notlike('VMWARE%') para esconder as VMs desta tela
     subquery = db.session.query(
         BackupLog.servidor,
         BackupLog.tipo_backup,
         db.func.max(BackupLog.id).label('max_id')
-    ).group_by(BackupLog.servidor, BackupLog.tipo_backup).subquery()
+    ).filter(BackupLog.tipo_backup.notlike('VMWARE%')).group_by(BackupLog.servidor, BackupLog.tipo_backup).subquery()
 
     ultimos_backups = db.session.query(BackupLog).join(
         subquery,
@@ -138,7 +139,6 @@ def dashboard():
 
     versao_app = os.environ.get('APP_VERSION', 'dev-local')
     
-    # Agora passamos os "grupos_servidores" já mastigados para o HTML
     return render_template('index.html', grupos_servidores=grupos_lista, version=versao_app)
 
 @app.route('/vmwares')
