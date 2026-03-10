@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    body { overflow-x: hidden !important; }
+
+    .container {
+        max-width: 100% !important;
+        width: 100%;
+        margin: 20px auto 30px auto; 
+        padding: 0 30px;
+        box-sizing: border-box;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important; /* VMs são mais compactas, cabem 3 por linha! */
+        gap: 15px;
+    }
+
+    @media (max-width: 1200px) { .container { grid-template-columns: repeat(2, 1fr) !important; } }
+    @media (max-width: 768px) { .container { grid-template-columns: 1fr !important; padding: 0 15px; } }
+
+    .host-header {
+        grid-column: 1 / -1;
+        background-color: #1a1e23;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 6px;
+        font-size: 18px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 5px;
+        border-left: 5px solid #007bff; /* Azul VMware */
+    }
+
+    .card { 
+        background-color: var(--card-bg); 
+        border-radius: 6px; 
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+        overflow: visible; 
+        border-top: 4px solid #007bff; /* Azul VMware */
+        width: 100%; 
+        position: relative; 
+        z-index: 1; 
+        transition: transform 0.2s;
+    }
+    
+    .card:hover { transform: translateY(-3px); z-index: 100; box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+    
+    .card-header { padding: 10px 15px; border-bottom: 1px solid #eeeeee; display: flex; justify-content: space-between; align-items: center; border-radius: 6px 6px 0 0; }
+
+    /* Extrai apenas o nome da VM do tipo_backup (Ex: VMWARE - srvcn19 -> srvcn19) */
+    .server-name { font-size: 15px; font-weight: bold; color: #2c3e50; margin: 0; display: flex; align-items: center; gap: 8px;}
+    
+    .badge { padding: 5px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; color: white; display: inline-flex; align-items: center; gap: 6px; }
+    .badge.sucesso { background-color: var(--success); }
+    .badge.falha { background-color: var(--cn-red); }
+    .badge.em-progresso { background-color: var(--progress); }
+
+    .spinner { width: 12px; height: 12px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .card-body { padding: 15px; }
+    .info-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
+    .info-label { color: var(--text-muted); font-weight: 600; }
+    .info-value { font-weight: 500; text-align: right; }
+    .divider { height: 1px; background-color: #eeeeee; margin: 10px 0; }
+    
+    .progress-container { width: 100%; background-color: #e0e0e0; border-radius: 4px; margin-top: 4px; height: 6px; overflow: hidden; }
+    .progress-bar { height: 100%; border-radius: 4px; transition: width 0.5s ease-in-out; }
+    .storage-block { margin-bottom: 10px; }
+    .storage-header { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
+    .storage-title { color: var(--text-muted); font-weight: 600; }
+    .storage-value { font-weight: bold; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="dashboard-content">
+    {% if grupos_servidores %}
+        {% for grupo in grupos_servidores %}
+        
+        <div class="container">
+            <div class="host-header">
+                <i class="fas fa-server"></i> VMware Host: {{ grupo.servidor }}
+            </div>
+
+            {% for bkp in grupo.backups %}
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="server-name">
+                        <i class="fas fa-microchip" style="color: #666; font-size: 14px;"></i> 
+                        {{ bkp.tipo_backup | replace('VMWARE - ', '') }}
+                    </h2>
+                    {% set status_class = bkp.status | lower | replace(' ', '-') %}
+                    <span class="badge {{ status_class }}">
+                        {% if bkp.status == 'EM PROGRESSO' %}<div class="spinner"></div>{% endif %}
+                        {{ bkp.status }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="info-row"><span class="info-label">Duração / Fim</span><span class="info-value" style="{% if bkp.status == 'EM PROGRESSO' %}color: var(--progress); font-style: italic;{% endif %}">{{ bkp.data_fim }}</span></div>
+                    
+                    <div class="divider"></div>
+
+                    {% set pct_origem = bkp.uso_percentual_origem|replace('%', '')|int %}
+                    {% if pct_origem > 90 %} {% set cor_origem = '#c62828' %}{% elif pct_origem > 75 %} {% set cor_origem = '#ff9800' %}{% else %} {% set cor_origem = '#007bff' %} {% endif %}
+                    <div class="storage-block" style="margin-top: 10px;">
+                        <div class="storage-header"><span class="storage-title">Datastore Origem</span><span class="storage-value">{{ bkp.uso_percentual_origem }} (Livre: {{ bkp.espaco_livre_origem }})</span></div>
+                        <div class="progress-container"><div class="progress-bar" style="width: {{ bkp.uso_percentual_origem }}; background-color: {{ cor_origem }};"></div></div>
+                    </div>
+
+                    {% set pct_destino = bkp.uso_percentual_destino|replace('%', '')|int %}
+                    {% if pct_destino > 90 %} {% set cor_destino = '#c62828' %}{% elif pct_destino > 75 %} {% set cor_destino = '#ff9800' %}{% else %} {% set cor_destino = '#2e7d32' %} {% endif %}
+                    <div class="storage-block" style="margin-top: 15px;">
+                        <div class="storage-header"><span class="storage-title">Uso NAS Destino</span><span class="storage-value">{{ bkp.uso_percentual_destino }} (Livre: {{ bkp.espaco_livre_destino }})</span></div>
+                        <div class="progress-container"><div class="progress-bar" style="width: {{ bkp.uso_percentual_destino }}; background-color: {{ cor_destino }};"></div></div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="container">
+            <div style="grid-column: 1 / -1; text-align: center; color: #666; padding: 50px;">
+                <h2>Nenhuma VM reportou backup ainda.</h2>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block bottom_scripts %}
+<script>
+    setInterval(() => {
+        fetch(window.location.href)
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const newContent = doc.querySelector('#dashboard-content').innerHTML;
+                document.querySelector('#dashboard-content').innerHTML = newContent;
+            })
+            .catch(err => console.error('Erro ao atualizar painel:', err));
+    }, 5000);
+</script>
+{% endblock %}

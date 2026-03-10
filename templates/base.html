@@ -170,7 +170,7 @@
                 <a href="/historico" class="{% if request.endpoint == 'historico' %}active{% else %}inactive{% endif %}">
                     <i class="fas fa-history"></i> Histórico
                 </a>
-                <a href="#" class="inactive" onclick="alert('O módulo de monitoramento de Vmwares está em desenvolvimento.'); return false;">
+                <a href="{{ url_for('vmwares') }}" class="{% if request.endpoint == 'vmwares' %}active{% else %}inactive{% endif %}">
                     <i class="fas fa-server"></i> Vmwares
                 </a>
             </div>

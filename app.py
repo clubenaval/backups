@@ -141,6 +141,49 @@ def dashboard():
     # Agora passamos os "grupos_servidores" já mastigados para o HTML
     return render_template('index.html', grupos_servidores=grupos_lista, version=versao_app)
 
+@app.route('/vmwares')
+def vmwares():
+    # Procura apenas backups onde o tipo_backup comece com "VMWARE"
+    subquery = db.session.query(
+        BackupLog.servidor,
+        BackupLog.tipo_backup,
+        db.func.max(BackupLog.id).label('max_id')
+    ).filter(BackupLog.tipo_backup.like('VMWARE%')).group_by(BackupLog.servidor, BackupLog.tipo_backup).subquery()
+
+    ultimos_backups = db.session.query(BackupLog).join(
+        subquery,
+        db.and_(
+            BackupLog.servidor == subquery.c.servidor,
+            BackupLog.tipo_backup == subquery.c.tipo_backup,
+            BackupLog.id == subquery.c.max_id
+        )
+    ).order_by(BackupLog.tipo_backup).all()
+
+    # Agrupamento lógico: O servidor será o Host (ex: BALI), e os tipos de backup serão as VMs
+    grupos_dict = {}
+    for bkp in ultimos_backups:
+        if bkp.servidor not in grupos_dict:
+            grupos_dict[bkp.servidor] = []
+        grupos_dict[bkp.servidor].append(bkp)
+        
+    grupos_lista = []
+    for servidor, bkps in grupos_dict.items():
+        has_falha = any(b.status.upper() == 'FALHA' for b in bkps)
+        count = len(bkps)
+        grupos_lista.append({
+            'servidor': servidor,
+            'backups': bkps,
+            'has_falha': has_falha,
+            'count': count
+        })
+        
+    # Ordena: Falhas no topo, depois alfabeticamente pelo Host
+    grupos_lista.sort(key=lambda g: (not g['has_falha'], g['servidor']))
+
+    versao_app = os.environ.get('APP_VERSION', 'dev-local')
+    
+    return render_template('vmwares.html', grupos_servidores=grupos_lista, version=versao_app)
+
 @app.route('/historico')
 def historico():
     filtro_servidor = request.args.get('servidor', '')
