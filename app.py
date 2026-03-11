@@ -91,9 +91,24 @@ def excluir_backup(id):
     try:
         backup = BackupLog.query.get(id)
         if backup:
-            db.session.delete(backup)
+            # Captura a "assinatura" exata desta execução
+            servidor_alvo = backup.servidor
+            tipo_alvo = backup.tipo_backup
+            data_inicio_alvo = backup.data_inicio
+            
+            # Localiza TODOS os registos (Em Progresso + Resultado) desta mesma execução
+            registros_da_sessao = BackupLog.query.filter_by(
+                servidor=servidor_alvo, 
+                tipo_backup=tipo_alvo, 
+                data_inicio=data_inicio_alvo
+            ).all()
+            
+            # Apaga a sessão inteira da base de dados e do histórico
+            for reg in registros_da_sessao:
+                db.session.delete(reg)
+                
             db.session.commit()
-            return jsonify({'mensagem': 'Registro excluído com sucesso!'}), 200
+            return jsonify({'mensagem': 'Sessão de backup inteira excluída com sucesso!'}), 200
         else:
             return jsonify({'erro': 'Registro não encontrado.'}), 404
     except Exception as e:
