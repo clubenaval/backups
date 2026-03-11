@@ -86,6 +86,19 @@ def registrar_backup():
     except Exception as e:
         return jsonify({'erro': str(e)}), 400
 
+@app.route('/api/backup/<int:id>', methods=['DELETE'])
+def excluir_backup(id):
+    try:
+        backup = BackupLog.query.get(id)
+        if backup:
+            db.session.delete(backup)
+            db.session.commit()
+            return jsonify({'mensagem': 'Registro excluído com sucesso!'}), 200
+        else:
+            return jsonify({'erro': 'Registro não encontrado.'}), 404
+    except Exception as e:
+        return jsonify({'erro': str(e)}), 500
+
 @app.route('/')
 def dashboard():
     # O SEGREDO ESTÁ AQUI: Adicionamos o filtro .notlike('VMWARE%') para esconder as VMs desta tela

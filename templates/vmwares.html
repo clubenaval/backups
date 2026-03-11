@@ -33,6 +33,21 @@
         border-left: 5px solid #007bff; /* Azul VMware */
     }
 
+    .btn-delete {
+        background: none;
+        border: none;
+        color: #cccccc;
+        cursor: pointer;
+        font-size: 14px;
+        transition: color 0.2s, transform 0.2s;
+        padding: 5px;
+        margin-left: 8px;
+    }
+    .btn-delete:hover {
+        color: var(--cn-red);
+        transform: scale(1.1);
+    }
+
     .card { 
         background-color: var(--card-bg); 
         border-radius: 6px; 
@@ -88,15 +103,19 @@
             {% for bkp in grupo.backups %}
             <div class="card">
                 <div class="card-header">
-                    <h2 class="server-name">
-                        <i class="fas fa-microchip" style="color: #666; font-size: 14px;"></i> 
-                        {{ bkp.tipo_backup | replace('VMWARE - ', '') }}
-                    </h2>
-                    {% set status_class = bkp.status | lower | replace(' ', '-') %}
-                    <span class="badge {{ status_class }}">
-                        {% if bkp.status == 'EM PROGRESSO' %}<div class="spinner"></div>{% endif %}
-                        {{ bkp.status }}
-                    </span>
+                    <h2 class="server-name">{{ bkp.servidor }} <span style="font-size:11px; color:#666;">({{ bkp.tipo_backup }})</span></h2>
+                    
+                    <div style="display: flex; align-items: center;">
+                        {% set status_class = bkp.status | lower | replace(' ', '-') %}
+                        <span class="badge {{ status_class }}">
+                            {% if bkp.status == 'EM PROGRESSO' %}<div class="spinner"></div>{% endif %}
+                            {{ bkp.status }}
+                        </span>
+                        
+                        <button class="btn-delete" onclick="deletarRegistro({{ bkp.id }})" title="Excluir este registro">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="info-row"><span class="info-label">Duração / Fim</span><span class="info-value" style="{% if bkp.status == 'EM PROGRESSO' %}color: var(--progress); font-style: italic;{% endif %}">{{ bkp.data_fim }}</span></div>
@@ -133,7 +152,8 @@
 
 {% block bottom_scripts %}
 <script>
-    setInterval(() => {
+    // Função que atualiza o painel
+    function atualizarPainel() {
         fetch(window.location.href)
             .then(response => response.text())
             .then(html => {
@@ -143,6 +163,27 @@
                 document.querySelector('#dashboard-content').innerHTML = newContent;
             })
             .catch(err => console.error('Erro ao atualizar painel:', err));
-    }, 5000);
+    }
+
+    // Mantém a atualização silenciosa a cada 5 segundos
+    setInterval(atualizarPainel, 5000);
+
+    // Nova Função para deletar o registro clicado
+    function deletarRegistro(id) {
+        if (confirm("Tem certeza que deseja excluir este backup? Ele sumirá do dashboard e do histórico.")) {
+            fetch(`/api/backup/${id}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.mensagem) {
+                    atualizarPainel(); // Força a tela a piscar com o novo dado na hora
+                } else {
+                    alert("Erro ao excluir: " + data.erro);
+                }
+            })
+            .catch(err => alert("Erro de conexão com a API: " + err));
+        }
+    }
 </script>
 {% endblock %}
